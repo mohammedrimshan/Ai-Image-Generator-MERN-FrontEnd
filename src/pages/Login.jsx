@@ -1,40 +1,84 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { toast } from 'react-hot-toast';
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { toast } from 'react-hot-toast'
+import { setUser } from '../redux/slice/authSlice'
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const user = useSelector(state => state.auth.user)
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard')
+    }
+  }, [user, navigate])
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
+    setLoading(true)
     try {
       const response = await fetch('http://localhost:3008/auth/login/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
+        body: JSON.stringify({ email, password })
+      })
+      const data = await response.json()
       
       if (response.ok) {
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-          window.dispatchEvent(new Event('storage'));
-        }
-        toast.success('OTP sent successfully');
-        navigate('/otp-verification', { state: { email } });
+        toast.success('OTP sent successfully')
+        navigate('/otp-verification', { state: { email } })
       } else {
-        toast.error(data.message || 'Login failed');
+        toast.error(data.message || 'Login failed')
       }
     } catch (error) {
-      toast.error('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.')
+    } finally {
+      setLoading(false)
     }
-  };
+  }
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        dispatch(setUser(null))
+        return
+      }
+
+      try {
+        const response = await fetch('http://localhost:3008/auth/check', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          dispatch(setUser(data.user))
+        } else {
+          dispatch(setUser(null))
+          localStorage.removeItem('token')
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+        dispatch(setUser(null))
+        localStorage.removeItem('token')
+      }
+    }
+
+    checkAuth()
+    const interval = setInterval(checkAuth, 60000) // Check every minute
+    return () => clearInterval(interval)
+  }, [dispatch])
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -55,6 +99,7 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -66,13 +111,20 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
-          <Button type="submit" className="w-full">Login</Button>
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={loading}
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </Button>
         </form>
       </motion.div>
     </div>
-  );
-};
+  )
+}
 
-export default Login;
+export default Login

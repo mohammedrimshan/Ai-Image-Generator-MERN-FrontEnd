@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Menu, X, Sun, Moon, LogOut, User } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '../hooks/useTheme';
-import { getUser } from '@/utils/auth';
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
+import { Button } from './ui/button'
+import { Menu, X, Sun, Moon, LogOut, User } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from '../hooks/useTheme'
+import { clearUser } from '../redux/slice/authSlice'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "./ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,46 +21,34 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "./ui/alert-dialog";
+} from "./ui/alert-dialog"
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Initial user check
-    setUser(getUser());
-
-    // Listen for storage events (including our custom one)
-    const handleStorageChange = () => {
-      setUser(getUser());
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  
-  const toggleMenu = () => setIsOpen(!isOpen);
+  const [isOpen, setIsOpen] = useState(false)
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
+  const { theme, toggleTheme } = useTheme()
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const { user, isAuthenticated } = useSelector((state) => state.auth)
+  console.log(user)
+  console.log(isAuthenticated)
+  const toggleMenu = () => setIsOpen(!isOpen)
 
   const handleLogout = () => {
-    setIsLogoutDialogOpen(true);
-  };
+    setIsLogoutDialogOpen(true)
+  }
 
   const confirmLogout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    setIsLogoutDialogOpen(false);
-    navigate('/');
-  };
+    localStorage.removeItem('token')
+    dispatch(clearUser())
+    setIsLogoutDialogOpen(false)
+    navigate('/')
+  }
 
   const menuVariants = {
     closed: { opacity: 0, x: "-100%" },
     open: { opacity: 1, x: 0 }
-  };
+  }
 
   return (
     <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b border-border/40">
@@ -73,7 +62,7 @@ const Navbar = () => {
               <Link to="/" className="text-foreground/60 hover:text-foreground px-3 py-2 rounded-md text-sm font-medium">Home</Link>
               <Link to="/generate" className="text-foreground/60 hover:text-foreground px-3 py-2 rounded-md text-sm font-medium">Generate</Link>
               <Link to="/gallery" className="text-foreground/60 hover:text-foreground px-3 py-2 rounded-md text-sm font-medium">Gallery</Link>
-              {user ? (
+              {isAuthenticated && user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="ml-4">
@@ -109,6 +98,7 @@ const Navbar = () => {
           </div>
         </div>
       </div>
+
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -123,7 +113,7 @@ const Navbar = () => {
               <Link to="/" className="text-foreground block px-3 py-2 rounded-md text-base font-medium">Home</Link>
               <Link to="/generate" className="text-foreground block px-3 py-2 rounded-md text-base font-medium">Generate</Link>
               <Link to="/gallery" className="text-foreground block px-3 py-2 rounded-md text-base font-medium">Gallery</Link>
-              {user ? (
+              {isAuthenticated && user ? (
                 <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
@@ -154,8 +144,7 @@ const Navbar = () => {
         </AlertDialogContent>
       </AlertDialog>
     </nav>
-  );
-};
+  )
+}
 
-export default Navbar;
-
+export default Navbar
